@@ -32,7 +32,7 @@ impl Game {
         }
     }
 
-    pub fn render(&self, canvas: &mut Canvas<Window>) {
+    pub fn render(&mut self, canvas: &mut Canvas<Window>) {
         self.board.render(canvas);
     }
 

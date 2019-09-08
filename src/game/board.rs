@@ -45,13 +45,7 @@ impl Board {
         }
     }
 
-    pub fn render(&self, canvas: &mut Canvas<Window>) {
-        self.field.iter().flatten().for_each(|point| {
-            if let Some(point) = point {
-                point.render(canvas);
-            }
-        });
-
+    pub fn render(&mut self, canvas: &mut Canvas<Window>) {
         if let Some(color) = self.current_color {
             canvas.set_draw_color(color);
         } else {
@@ -62,6 +56,12 @@ impl Board {
             let from = sdlPoint::new(segment.from.x, segment.from.y);
             let to = sdlPoint::new(segment.to.x, segment.to.y);
             canvas.draw_line(from, to).unwrap();
+        });
+
+        self.field.iter_mut().flatten().for_each(|point| {
+            if let Some(point) = point {
+                point.render(canvas);
+            }
         });
     }
 
@@ -132,8 +132,7 @@ impl Board {
 
         self.segments.clear();
 
-        let amount_of_cleared_points = self.clear_points();
-        self.move_points();
+        let count = self.clear_points();
 
         self.closed_path = false;
         self.current_color = None;
@@ -141,40 +140,32 @@ impl Board {
 
     fn clear_points(&mut self) -> i32 {
         let mut count = 0;
-        self.field = self.field.iter().map(|column| {
-            column.iter().map(|point| {
-                if let Some(p) = point {
-                    if p.connected {
-                        count += 1;
-                        return None;
-                    }
 
-                    return Some(*p);
-                }
-
-                None
-            }).collect::<Vec<Option<Point>>>()
-        }).collect();
-
-        count
-    }
-
-    fn move_points(&mut self) {
         self.field = self.field.iter_mut().enumerate().map(|(x, column)| {
             let mut new_column: Vec<Option<Point>> = vec![None; 5];
 
-            let points = column.iter_mut().filter(|point| point.is_some());
+            let points = column.iter_mut().filter(|point| !point.unwrap().connected);
 
             points.rev().enumerate()
                 .for_each(|(y, point)| {
                     let mut point = point.unwrap();
                     let coords = Board::index_to_coordinates(x,  4 - y);
-                    point.center = coords;
+                    point.move_to(coords);
                     new_column[4 - y] = Some(point);
                 });
 
+            for i in 0..5 {
+                if let None = new_column[i] {
+                    let coords = Board::index_to_coordinates(x,  i);
+                    new_column[i] = Some(Point::new(coords));
+                    count += 1;
+                }
+            }
+
             new_column
         }).collect();
+
+        count
     }
 
     fn get_point(&self, x: i32, y: i32) -> Option<&Point> {
@@ -236,6 +227,9 @@ impl Board {
         let point = self.get_point(next.x, next.y).unwrap();
 
         if point.connected {
+            let color = point.color;
+            self.connect_all(color);
+
             self.closed_path = true;
         }
 
@@ -264,11 +258,43 @@ impl Board {
 
 
         if self.closed_path {
+            let color = self.get_point(next.x, next.y).unwrap().color;
+            self.disconnect_all(color);
+
             self.closed_path = false;
         } else {
             let point = self.get_point_mut(next.x, next.y).unwrap();
             point.disconnect();
         }
+    }
+
+    fn connect_all(&mut self, color: Color) {
+        self.field.iter_mut().flatten().for_each(|point| {
+            if let Some(point) = point {
+                if point.color == color {
+                    point.connect();
+                }
+            }
+        });
+    }
+
+    fn disconnect_all(&mut self, color: Color) {
+        let connected_by_segments: Vec<Point> = self.field.iter().flatten()
+            .filter(|point| {
+                self.segments.iter().any(|segment| segment.from == point.unwrap().center)
+            })
+            .map(|p| {
+                p.unwrap()
+            })
+            .collect();
+
+        self.field.iter_mut().flatten().for_each(|point| {
+            if let Some(point) = point {
+                if point.color == color && !connected_by_segments.contains(point) {
+                    point.disconnect();
+                }
+            }
+        });
     }
 
     fn is_previous(&self, point: &Point) -> bool {
