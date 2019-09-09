@@ -14,7 +14,6 @@ use game::Game;
 
 pub const FIELD_OFFSET_LEFT: i32 = 50;
 pub const FIELD_OFFSET_TOP: i32 = 100;
-
 pub const TILE_SIZE: i32 = 60;
 
 fn main() {
@@ -28,8 +27,12 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut canvas = window.into_canvas().build().unwrap();
+    let mut canvas = window.into_canvas()
+        .accelerated()
+        .build()
+        .unwrap();
 
+    canvas.set_blend_mode(BlendMode::Blend);
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
     canvas.present();
@@ -63,6 +66,7 @@ fn main() {
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         canvas.clear();
 
+        game.update();
         game.render(&mut canvas);
 
         canvas.present();

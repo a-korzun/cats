@@ -10,13 +10,18 @@ use crate::game::color::{BLUE, RED, PURPLE, GREEN, ORANGE};
 use crate::game::color::{DARK_BLUE, DARK_RED, DARK_PURPLE, DARK_GREEN, DARK_ORANGE};
 use crate::game::Coordinates;
 
+use crate::{TILE_SIZE, FIELD_OFFSET_LEFT, FIELD_OFFSET_TOP};
+
+const GRAVITY: i32 = 1;
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Point {
     pub color: Color,
     dark_color: Color,
     pub center: Coordinates,
     pub connected: bool,
-    prev_center: Coordinates,
+    transition_center: Coordinates,
+    speed: i32,
 }
 
 impl Point {
@@ -27,19 +32,30 @@ impl Point {
             color,
             dark_color,
             center: coordinates,
-            prev_center: coordinates,
+            transition_center: Coordinates { x: coordinates.x, y: coordinates.y - 400 },
             connected: false,
+            speed: 0,
         }
     }
 
-    pub fn render(&mut self, canvas: &mut Canvas<Window>) {
-        let center;
-        if self.prev_center != self.center {
-            self.prev_center.y += 20;
-            center = self.prev_center;
-        } else {
-            center = self.center;
+    pub fn update(&mut self) {
+        let step = self.speed;
+        let diff = self.center.y - self.transition_center.y;
+
+        if diff > 0 {
+            self.transition_center.y += step;
+            self.speed += GRAVITY;
         }
+
+        if diff < 0 {
+            self.transition_center.y = self.center.y;
+            self.speed = 0;
+        }
+
+    }
+
+    pub fn render(&mut self, canvas: &mut Canvas<Window>) {
+        let center = self.transition_center;
 
         if self.connected {
             canvas.set_draw_color(self.color);
@@ -48,7 +64,6 @@ impl Point {
             canvas.set_draw_color(self.dark_color);
             Point::draw_cat(canvas, center.x, center.y);
             Point::draw_cat_face(canvas, center.x, center.y);
-
         } else {
             canvas.set_draw_color(self.color);
             Point::draw_cat(canvas, center.x, center.y);
@@ -207,7 +222,7 @@ impl Point {
 
     fn fill_cat_transparent(canvas: &mut Canvas<Window>, cx: i32, cy: i32) {
         let color = canvas.draw_color();
-        let alpha_color = Color::RGBA(color.r, color.g, color.b, 20);
+        let alpha_color = Color::RGBA(color.r, color.g, color.b, 50);
         canvas.set_draw_color(alpha_color);
 
         Point::fill_cat(canvas, cx, cy);

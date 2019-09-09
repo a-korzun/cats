@@ -7,12 +7,18 @@ use sdl2::rect::{ Point as sdlPoint };
 
 use crate::{TILE_SIZE, FIELD_OFFSET_LEFT, FIELD_OFFSET_TOP};
 use crate::game::point::Point;
-use crate::game::{Coordinates, Segment};
+use crate::game::Coordinates;
 
 enum Action {
     Connect,
     Disconnect,
     None,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Segment {
+    pub from: Coordinates,
+    pub to: Coordinates,
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,6 +49,14 @@ impl Board {
             closed_path: false,
             current_color: None,
         }
+    }
+
+    pub fn update(&mut self) {
+        self.field.iter_mut().flatten().for_each(|point| {
+            if let Some(point) = point {
+                point.update();
+            }
+        });
     }
 
     pub fn render(&mut self, canvas: &mut Canvas<Window>) {
