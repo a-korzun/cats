@@ -1,9 +1,11 @@
 use std::collections::LinkedList;
+use std::path::Path;
 
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::pixels::Color;
-use sdl2::rect::{ Point as sdlPoint };
+use sdl2::rect::{ Rect, Point as sdlPoint };
+use sdl2::image::LoadTexture;
 
 use crate::{TILE_SIZE, FIELD_OFFSET_LEFT, FIELD_OFFSET_TOP};
 use crate::game::point::Point;
@@ -60,23 +62,42 @@ impl Board {
     }
 
     pub fn render(&mut self, canvas: &mut Canvas<Window>) {
+        self.render_board(canvas);
+
         if let Some(color) = self.current_color {
             canvas.set_draw_color(color);
-        } else {
-            canvas.set_draw_color(Color::RGB(90, 90, 90));
         }
 
         self.segments.iter().for_each(|segment| {
             let from = sdlPoint::new(segment.from.x, segment.from.y);
             let to = sdlPoint::new(segment.to.x, segment.to.y);
             canvas.draw_line(from, to).unwrap();
+
+            let from = sdlPoint::new(segment.from.x + 1, segment.from.y);
+            let to = sdlPoint::new(segment.to.x + 1, segment.to.y);
+            canvas.draw_line(from, to).unwrap();
+
+            let from = sdlPoint::new(segment.from.x, segment.from.y + 1);
+            let to = sdlPoint::new(segment.to.x, segment.to.y + 1);
+            canvas.draw_line(from, to).unwrap();
         });
+
+        let texture_creator = canvas.texture_creator();
+        let texture = texture_creator.load_texture(Path::new("assets/cats.png")).unwrap();
 
         self.field.iter_mut().flatten().for_each(|point| {
             if let Some(point) = point {
-                point.render(canvas);
+                point.render(canvas, &texture);
             }
         });
+    }
+
+    fn render_board(&mut self, canvas: &mut Canvas<Window>) {
+        let size = (TILE_SIZE * 5) as u32;
+        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        canvas.fill_rect(Rect::new(FIELD_OFFSET_LEFT - 4, FIELD_OFFSET_TOP, size + 8, size)).unwrap();
+        canvas.fill_rect(Rect::new(FIELD_OFFSET_LEFT, FIELD_OFFSET_TOP - 4, size, size + 8)).unwrap();
+        canvas.fill_rect(Rect::new(FIELD_OFFSET_LEFT - 2, FIELD_OFFSET_TOP - 2, size + 4, size + 4)).unwrap();
     }
 
     pub fn handle_click(&mut self, x: i32, y: i32) {
@@ -97,6 +118,10 @@ impl Board {
     }
 
     pub fn handle_move(&mut self, x: i32, y: i32) {
+        if self.segments.len() == 0 {
+            return;
+        }
+
         if self.closed_path {
             let mut segment = self.segments.front_mut().unwrap();
             segment.to = segment.from;
@@ -131,7 +156,7 @@ impl Board {
         };
     }
 
-    pub fn handle_raise(&mut self) {
+    pub fn handle_raise(&mut self) -> i32 {
         if self.segments.len() < 2 {
             self.segments.clear();
 
@@ -141,7 +166,7 @@ impl Board {
                 }
             });
 
-            return;
+            return 0;
         }
 
         self.segments.clear();
@@ -150,6 +175,8 @@ impl Board {
 
         self.closed_path = false;
         self.current_color = None;
+
+        count
     }
 
     fn clear_points(&mut self) -> i32 {

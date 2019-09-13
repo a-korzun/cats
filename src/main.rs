@@ -5,25 +5,28 @@ pub(crate) mod game;
 
 use std::time::Duration;
 
-use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
+use sdl2::render::BlendMode;
+use sdl2::image::InitFlag;
 
 use game::Game;
+use game::color::BACKGROUND;
 
 pub const FIELD_OFFSET_LEFT: i32 = 50;
 pub const FIELD_OFFSET_TOP: i32 = 100;
 pub const TILE_SIZE: i32 = 60;
 
 fn main() {
-    let mut game = Game::new();
-
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
-    let window = video_subsystem.window("cats", 400, 400)
+    let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG);
+
+    let window = video_subsystem.window("cats", 400, 420)
         .position_centered()
+        .opengl()
         .build()
         .unwrap();
 
@@ -33,9 +36,11 @@ fn main() {
         .unwrap();
 
     canvas.set_blend_mode(BlendMode::Blend);
-    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    canvas.set_draw_color(BACKGROUND);
     canvas.clear();
     canvas.present();
+
+    let mut game = Game::new();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -63,13 +68,13 @@ fn main() {
             }
         }
 
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        canvas.set_draw_color(BACKGROUND);
         canvas.clear();
 
         game.update();
         game.render(&mut canvas);
 
         canvas.present();
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        std::thread::sleep(Duration::from_millis(16));
     }
 }

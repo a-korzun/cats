@@ -6,6 +6,10 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies.sdl2]
+version = "0.32.2"
+default-features = false
+features = ["image"]
+
 [dependencies]
 rand = "0.7.0"
-sdl2 = "0.32.2"
